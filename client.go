@@ -85,12 +85,12 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 	return nil
 }
 
-func (c *ArchiverClient) Encode(messages []message.Message, guildId uint64, ticketId int) ([]byte, error) {
+func (c *ArchiverClient) Encode(messages []message.Message, ticketId int) ([]byte, error) {
 	encoded, err := json.Marshal(messages); if err != nil {
 		return nil, err
 	}
 
-	endpoint := fmt.Sprintf("%s/encode", c.endpoint)
+	endpoint := fmt.Sprintf("%s/encode?id=%d", c.endpoint, ticketId)
 	httpClient := newHttpClient()
 	res, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
