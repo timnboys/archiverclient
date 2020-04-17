@@ -15,6 +15,8 @@ type ArchiverClient struct {
 	endpoint string
 }
 
+var ErrExpired = errors.New("log has expired")
+
 func NewArchiverClient(endpoint string) ArchiverClient {
 	endpoint = strings.TrimSuffix(endpoint, "/")
 
@@ -33,6 +35,10 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
+		if res.StatusCode == 404 {
+			return nil, ErrExpired
+		}
+
 		var decoded map[string]string
 		if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
 			return nil, err
