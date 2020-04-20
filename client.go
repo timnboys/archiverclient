@@ -26,8 +26,10 @@ func NewArchiverClient(endpoint string) ArchiverClient {
 }
 
 func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, error) {
-	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
 	httpClient := newHttpClient()
+	defer httpClient.CloseIdleConnections()
+
+	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
 	res, err := httpClient.Get(endpoint)
 	if err != nil {
 		return nil, err
@@ -61,12 +63,14 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 		return err
 	}
 
+	httpClient := newHttpClient()
+	defer httpClient.CloseIdleConnections()
+
 	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
 	if premium {
 		endpoint += "&premium"
 	}
 
-	httpClient := newHttpClient()
 	res, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		return err
@@ -90,8 +94,10 @@ func (c *ArchiverClient) Encode(messages []message.Message, ticketId int) ([]byt
 		return nil, err
 	}
 
-	endpoint := fmt.Sprintf("%s/encode?id=%d", c.endpoint, ticketId)
 	httpClient := newHttpClient()
+	defer httpClient.CloseIdleConnections()
+
+	endpoint := fmt.Sprintf("%s/encode?id=%d", c.endpoint, ticketId)
 	res, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		return nil, err
