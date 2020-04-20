@@ -12,7 +12,8 @@ import (
 )
 
 type ArchiverClient struct {
-	endpoint string
+	endpoint   string
+	httpClient *http.Client
 }
 
 var ErrExpired = errors.New("log has expired")
@@ -22,15 +23,18 @@ func NewArchiverClient(endpoint string) ArchiverClient {
 
 	return ArchiverClient{
 		endpoint: endpoint,
+		httpClient: &http.Client{
+			Timeout: time.Second * 3,
+			Transport: &http.Transport{
+				TLSHandshakeTimeout: time.Second * 3,
+			},
+		},
 	}
 }
 
 func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, error) {
-	httpClient := newHttpClient()
-	defer httpClient.CloseIdleConnections()
-
 	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
-	res, err := httpClient.Get(endpoint)
+	res, err := c.httpClient.Get(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -63,15 +67,12 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 		return err
 	}
 
-	httpClient := newHttpClient()
-	defer httpClient.CloseIdleConnections()
-
 	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
 	if premium {
 		endpoint += "&premium"
 	}
 
-	res, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
+	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		return err
 	}
@@ -90,15 +91,13 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 }
 
 func (c *ArchiverClient) Encode(messages []message.Message, ticketId int) ([]byte, error) {
-	encoded, err := json.Marshal(messages); if err != nil {
+	encoded, err := json.Marshal(messages)
+	if err != nil {
 		return nil, err
 	}
 
-	httpClient := newHttpClient()
-	defer httpClient.CloseIdleConnections()
-
 	endpoint := fmt.Sprintf("%s/encode?id=%d", c.endpoint, ticketId)
-	res, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
+	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		return nil, err
 	}
@@ -118,14 +117,5 @@ func (c *ArchiverClient) Encode(messages []message.Message, ticketId int) ([]byt
 		}
 
 		return buff.Bytes(), nil
-	}
-}
-
-func newHttpClient() *http.Client {
-	return &http.Client{
-		Timeout: time.Second * 3,
-		Transport: &http.Transport{
-			TLSHandshakeTimeout: time.Second * 3,
-		},
 	}
 }
