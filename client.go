@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TicketsBot/logarchiver"
 	"github.com/rxdn/gdl/objects/channel/message"
 	"net/http"
 	"strings"
@@ -146,6 +147,32 @@ func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64
 	}
 
 	return nil
+}
+
+func (c *ArchiverClient) GetModmailKeys(guildId uint64) ([]logarchiver.StoredObject, error) {
+	endpoint := fmt.Sprintf("%s/modmail/all?guild=%d", c.endpoint, guildId)
+
+	res, err := c.httpClient.Get(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		var decoded map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
+			return nil, err
+		}
+
+		return nil, errors.New(decoded["error"])
+	}
+
+	var decoded []logarchiver.StoredObject
+	if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
+		return nil, err
+	}
+
+	return decoded, nil
 }
 
 func (c *ArchiverClient) Encode(messages []message.Message, title string) ([]byte, error) {
