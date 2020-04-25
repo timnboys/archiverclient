@@ -20,12 +20,16 @@ type ArchiverClient struct {
 var ErrExpired = errors.New("log has expired")
 
 func NewArchiverClient(endpoint string) ArchiverClient {
+	return NewArchiverClientWithTimeout(endpoint, time.Second * 3)
+}
+
+func NewArchiverClientWithTimeout(endpoint string, timeout time.Duration) ArchiverClient {
 	endpoint = strings.TrimSuffix(endpoint, "/")
 
 	return ArchiverClient{
 		endpoint: endpoint,
 		httpClient: &http.Client{
-			Timeout: time.Second * 3,
+			Timeout: timeout,
 			Transport: &http.Transport{
 				TLSHandshakeTimeout: time.Second * 3,
 			},
