@@ -126,7 +126,7 @@ func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64
 		return err
 	}
 
-	endpoint := fmt.Sprintf("%s/modmail?guild=%d&id=%s", c.endpoint, guildId, uuid)
+	endpoint := fmt.Sprintf("%s/modmail?guild=%d&uuid=%s", c.endpoint, guildId, uuid)
 	if premium {
 		endpoint += "&premium"
 	}
