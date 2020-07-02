@@ -96,10 +96,7 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 		return err
 	}
 
-	data, err = encryption.Compress(data)
-	if err != nil {
-		return err
-	}
+	data = encryption.Compress(data)
 
 	endpoint := fmt.Sprintf("%s/?guild=%d&id=%d", c.endpoint, guildId, ticketId)
 	if premium {
@@ -179,10 +176,7 @@ func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64
 		return err
 	}
 
-	data, err = encryption.Compress(data)
-	if err != nil {
-		return err
-	}
+	data = encryption.Compress(data)
 
 	endpoint := fmt.Sprintf("%s/modmail?guild=%d&uuid=%s", c.endpoint, guildId, uuid)
 	if premium {
