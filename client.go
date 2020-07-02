@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TicketsBot/common/encryption"
 	"github.com/TicketsBot/logarchiver"
 	"github.com/rxdn/gdl/objects/channel/message"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -15,15 +17,16 @@ import (
 type ArchiverClient struct {
 	endpoint   string
 	httpClient *http.Client
+	key        []byte
 }
 
 var ErrExpired = errors.New("log has expired")
 
-func NewArchiverClient(endpoint string) ArchiverClient {
-	return NewArchiverClientWithTimeout(endpoint, time.Second * 3)
+func NewArchiverClient(endpoint string, encryptionKey []byte) ArchiverClient {
+	return NewArchiverClientWithTimeout(endpoint, time.Second*3, encryptionKey)
 }
 
-func NewArchiverClientWithTimeout(endpoint string, timeout time.Duration) ArchiverClient {
+func NewArchiverClientWithTimeout(endpoint string, timeout time.Duration, encryptionKey []byte) ArchiverClient {
 	endpoint = strings.TrimSuffix(endpoint, "/")
 
 	return ArchiverClient{
@@ -34,6 +37,7 @@ func NewArchiverClientWithTimeout(endpoint string, timeout time.Duration) Archiv
 				TLSHandshakeTimeout: time.Second * 3,
 			},
 		},
+		key: encryptionKey,
 	}
 }
 
@@ -45,20 +49,35 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 	}
 	defer res.Body.Close()
 
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = encryption.Decompress(body)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = encryption.Decrypt(c.key, body)
+	if err != nil {
+		return nil, err
+	}
+
 	if res.StatusCode != 200 {
 		if res.StatusCode == 404 {
 			return nil, ErrExpired
 		}
 
 		var decoded map[string]string
-		if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
+		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 
 		return nil, errors.New(decoded["message"])
 	} else {
 		var messages []message.Message
-		if err := json.NewDecoder(res.Body).Decode(&messages); err != nil {
+		if err := json.Unmarshal(body, &messages); err != nil {
 			return nil, err
 		}
 
@@ -67,7 +86,17 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 }
 
 func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticketId int, premium bool) error {
-	encoded, err := json.Marshal(messages)
+	data, err := json.Marshal(messages)
+	if err != nil {
+		return err
+	}
+
+	data, err = encryption.Encrypt(c.key, data)
+	if err != nil {
+		return err
+	}
+
+	data, err = encryption.Compress(data)
 	if err != nil {
 		return err
 	}
@@ -77,7 +106,7 @@ func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticke
 		endpoint += "&premium"
 	}
 
-	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
+	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -103,20 +132,35 @@ func (c *ArchiverClient) GetModmail(guildId uint64, uuid string) ([]message.Mess
 	}
 	defer res.Body.Close()
 
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = encryption.Decompress(body)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = encryption.Decrypt(c.key, body)
+	if err != nil {
+		return nil, err
+	}
+
 	if res.StatusCode != 200 {
 		if res.StatusCode == 404 {
 			return nil, ErrExpired
 		}
 
 		var decoded map[string]string
-		if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
+		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 
 		return nil, errors.New(decoded["message"])
 	} else {
 		var messages []message.Message
-		if err := json.NewDecoder(res.Body).Decode(&messages); err != nil {
+		if err := json.Unmarshal(body, &messages); err != nil {
 			return nil, err
 		}
 
@@ -125,7 +169,17 @@ func (c *ArchiverClient) GetModmail(guildId uint64, uuid string) ([]message.Mess
 }
 
 func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64, uuid string, premium bool) error {
-	encoded, err := json.Marshal(messages)
+	data, err := json.Marshal(messages)
+	if err != nil {
+		return err
+	}
+
+	data, err = encryption.Encrypt(c.key, data)
+	if err != nil {
+		return err
+	}
+
+	data, err = encryption.Compress(data)
 	if err != nil {
 		return err
 	}
@@ -135,7 +189,7 @@ func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64
 		endpoint += "&premium"
 	}
 
-	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(encoded))
+	res, err := c.httpClient.Post(endpoint, "application/json", bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
