@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TicketsBot/archiverclient/discord"
 	"github.com/TicketsBot/common/encryption"
 	"github.com/TicketsBot/logarchiver"
 	"github.com/rxdn/gdl/objects/channel/message"
@@ -86,7 +87,9 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 }
 
 func (c *ArchiverClient) Store(messages []message.Message, guildId uint64, ticketId int, premium bool) error {
-	data, err := json.Marshal(messages)
+	reduced := discord.ReduceMessages(messages)
+
+	data, err := json.Marshal(reduced)
 	if err != nil {
 		return err
 	}
@@ -166,7 +169,9 @@ func (c *ArchiverClient) GetModmail(guildId uint64, uuid string) ([]message.Mess
 }
 
 func (c *ArchiverClient) StoreModmail(messages []message.Message, guildId uint64, uuid string, premium bool) error {
-	data, err := json.Marshal(messages)
+	reduced := discord.ReduceMessages(messages)
+
+	data, err := json.Marshal(reduced)
 	if err != nil {
 		return err
 	}
