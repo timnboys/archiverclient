@@ -55,16 +55,6 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 		return nil, err
 	}
 
-	body, err = encryption.Decompress(body)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err = encryption.Decrypt(c.key, body)
-	if err != nil {
-		return nil, err
-	}
-
 	if res.StatusCode != 200 {
 		if res.StatusCode == 404 {
 			return nil, ErrExpired
@@ -77,6 +67,16 @@ func (c *ArchiverClient) Get(guildId uint64, ticketId int) ([]message.Message, e
 
 		return nil, errors.New(decoded["message"])
 	} else {
+		body, err = encryption.Decompress(body)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = encryption.Decrypt(c.key, body)
+		if err != nil {
+			return nil, err
+		}
+
 		var messages []message.Message
 		if err := json.Unmarshal(body, &messages); err != nil {
 			return nil, err
@@ -137,16 +137,6 @@ func (c *ArchiverClient) GetModmail(guildId uint64, uuid string) ([]message.Mess
 		return nil, err
 	}
 
-	body, err = encryption.Decompress(body)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err = encryption.Decrypt(c.key, body)
-	if err != nil {
-		return nil, err
-	}
-
 	if res.StatusCode != 200 {
 		if res.StatusCode == 404 {
 			return nil, ErrExpired
@@ -159,6 +149,16 @@ func (c *ArchiverClient) GetModmail(guildId uint64, uuid string) ([]message.Mess
 
 		return nil, errors.New(decoded["message"])
 	} else {
+		body, err = encryption.Decompress(body)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = encryption.Decrypt(c.key, body)
+		if err != nil {
+			return nil, err
+		}
+
 		var messages []message.Message
 		if err := json.Unmarshal(body, &messages); err != nil {
 			return nil, err
